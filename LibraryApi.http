@@ -1,0 +1,17 @@
+@LibraryApi_HostAddress = http://localhost:5159
+
+### Вход администратора
+POST {{LibraryApi_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin123!"
+}
+
+### Сводный отчёт без токена — 401
+GET {{LibraryApi_HostAddress}}/api/reports/overdue
+
+###
+GET {{LibraryApi_HostAddress}}/api/books
+Accept: application/json

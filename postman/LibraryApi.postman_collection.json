@@ -1,0 +1,555 @@
+{
+  "info": {
+    "name": "Library API",
+    "description": "Курсовая Web API библиотеки.\n\nБазовый адрес: http://localhost:5159\n\nУчётные записи:\n- admin / Admin123! — роль Admin, может добавлять и менять данные\n- user / User123! — роль User, может смотреть сводные отчёты\n\nКак показать разницу ошибок:\n- запрос «Отчёт без токена» не передаёт Authorization и возвращает 401;\n- «Создать книгу от пользователя» передаёт токен user и возвращает 403;\n- «Создать книгу от администратора» с токеном admin возвращает 201.\n\nЗапускайте папку сверху вниз: сначала вход, затем отчёты и CRUD.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5159" },
+    { "key": "adminToken", "value": "" },
+    { "key": "userToken", "value": "" },
+    { "key": "createdBookId", "value": "" },
+    { "key": "createdLoanId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 Авторизация",
+      "item": [
+        {
+          "name": "Вход администратора",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Администратор вошёл', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.role).to.eql('Admin');",
+                  "    pm.collectionVariables.set('adminToken', body.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Вход пользователя",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Пользователь вошёл', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.role).to.eql('User');",
+                  "    pm.collectionVariables.set('userToken', body.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user\",\n  \"password\": \"User123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Неверный пароль (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Неверные учётные данные — 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrong\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Отчёты",
+      "item": [
+        {
+          "name": "Просроченные без токена (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Нет токена — 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/overdue"
+          }
+        },
+        {
+          "name": "Активные выдачи (пользователь)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Авторизованный пользователь видит отчёт', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/active-loans"
+          }
+        },
+        {
+          "name": "Просроченные и штраф (администратор)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('В просрочке есть штраф', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const row = pm.response.json()[0];",
+                  "    pm.expect(row.fine).to.be.above(0);",
+                  "    pm.expect(row.daysOverdue).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/overdue"
+          }
+        },
+        {
+          "name": "Читатели и число выдач",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Сводка по читателям', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const blocked = pm.response.json().find(r => r.isBlocked);",
+                  "    pm.expect(blocked).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/readers"
+          }
+        },
+        {
+          "name": "Книги и число выдач",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Сводка по книгам', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reports/books"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Книги",
+      "item": [
+        {
+          "name": "Список книг",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Список открыт без токена', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/books" }
+        },
+        {
+          "name": "Только свободные экземпляры",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Фильтр available', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().every(b => b.availableCopies > 0)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/books?available=true" }
+        },
+        {
+          "name": "Создать книгу без токена (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Добавление без токена — 401', function () { pm.response.to.have.status(401); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Тихий Дон\",\n  \"author\": \"Шолохов\",\n  \"publishedYear\": 1940,\n  \"price\": 520,\n  \"totalCopies\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/books"
+          }
+        },
+        {
+          "name": "Создать книгу от пользователя (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Пользователь не администратор — 403', function () { pm.response.to.have.status(403); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Тихий Дон\",\n  \"author\": \"Шолохов\",\n  \"publishedYear\": 1940,\n  \"price\": 520,\n  \"totalCopies\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/books"
+          }
+        },
+        {
+          "name": "Создать книгу от администратора",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Администратор добавил книгу', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('createdBookId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Тихий Дон\",\n  \"author\": \"Шолохов\",\n  \"publishedYear\": 1940,\n  \"price\": 520,\n  \"totalCopies\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/books"
+          }
+        },
+        {
+          "name": "Изменить книгу",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Книга изменена', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Тихий Дон\",\n  \"author\": \"Шолохов\",\n  \"publishedYear\": 1940,\n  \"price\": 500,\n  \"totalCopies\": 3\n}"
+            },
+            "url": "{{baseUrl}}/api/books/{{createdBookId}}"
+          }
+        },
+        {
+          "name": "Скидка 10 процентов",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Скидка применилась', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().price).to.eql(450);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"percent\": 10\n}" },
+            "url": "{{baseUrl}}/api/books/{{createdBookId}}/discount"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Читатели",
+      "item": [
+        {
+          "name": "Список читателей",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Список читателей', function () { pm.response.to.have.status(200); });"]
+              }
+            }
+          ],
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/readers" }
+        },
+        {
+          "name": "Заблокировать уже заблокированного (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Повторная блокировка отклонена', function () { pm.response.to.have.status(400); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "url": "{{baseUrl}}/api/readers/2/block"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Выдачи",
+      "item": [
+        {
+          "name": "Выдать книгу заблокированному (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Бизнес-правило блокировки', function () { pm.response.to.have.status(400); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": 2,\n  \"readerId\": 2,\n  \"days\": 7\n}" },
+            "url": "{{baseUrl}}/api/loans"
+          }
+        },
+        {
+          "name": "Выдать книгу от пользователя (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Пользователь не может выдавать', function () { pm.response.to.have.status(403); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": 2,\n  \"readerId\": 1,\n  \"days\": 7\n}" },
+            "url": "{{baseUrl}}/api/loans"
+          }
+        },
+        {
+          "name": "Выдать книгу от администратора",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Выдача создана', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('createdLoanId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": 2,\n  \"readerId\": 1,\n  \"days\": 7\n}" },
+            "url": "{{baseUrl}}/api/loans"
+          }
+        },
+        {
+          "name": "Вернуть книгу",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Книга возвращена', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().returnedOn).to.not.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "url": "{{baseUrl}}/api/loans/{{createdLoanId}}/return"
+          }
+        },
+        {
+          "name": "Удалить созданную книгу",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Книга удалена', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/books/{{createdBookId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
