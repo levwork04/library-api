@@ -1,0 +1,181 @@
+<section class="page">
+  <div class="page-head">
+    <div>
+      <h1>Сводные отчёты</h1>
+      <p class="hint">Доступны любому вошедшему пользователю. Без токена сервер отвечает 401.</p>
+    </div>
+    <app-view-switch [(view)]="view" />
+  </div>
+  <mat-form-field appearance="outline">
+    <mat-label>Поиск по отчётам</mat-label>
+    <input matInput [value]="query()" (input)="query.set(asText($event))">
+  </mat-form-field>
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (loading()) { <p class="hint">Загрузка…</p> }
+  @else {
+    <h2>Активные выдачи</h2>
+    @if (view() === 'table') {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="activeView()">
+          <ng-container matColumnDef="bookTitle">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('bookTitle')">Книга {{ mark('bookTitle') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.bookTitle }}</td>
+          </ng-container>
+          <ng-container matColumnDef="readerName">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('readerName')">Читатель {{ mark('readerName') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.readerName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="issuedOn">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('issuedOn')">Выдана {{ mark('issuedOn') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.issuedOn | date:'dd.MM.yyyy' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="dueOn">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('dueOn')">Срок {{ mark('dueOn') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.dueOn | date:'dd.MM.yyyy' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="activeColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: activeColumns"></tr>
+        </table>
+      </div>
+    } @else {
+      <div class="cards">
+        @for (row of activeView(); track row.loanId) {
+          <mat-card>
+            <mat-card-title>{{ row.bookTitle }}</mat-card-title>
+            <mat-card-content>
+              <p>{{ row.author }} · {{ row.readerName }}</p>
+              <p>До {{ row.dueOn | date:'dd.MM.yyyy' }}</p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+
+    <h2>Просрочка и штрафы</h2>
+    @if (overdueView().length === 0) { <p class="empty">Просроченных выдач нет.</p> }
+    @else if (view() === 'table') {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="overdueView()">
+          <ng-container matColumnDef="bookTitle">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('bookTitle')">Книга {{ mark('bookTitle') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.bookTitle }}</td>
+          </ng-container>
+          <ng-container matColumnDef="readerName">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('readerName')">Читатель {{ mark('readerName') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.readerName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="dueOn">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('dueOn')">Срок {{ mark('dueOn') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.dueOn | date:'dd.MM.yyyy' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="daysOverdue">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('daysOverdue')">Дней {{ mark('daysOverdue') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.daysOverdue }}</td>
+          </ng-container>
+          <ng-container matColumnDef="fine">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('fine')">Штраф {{ mark('fine') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.fine | currency:'RUB':'symbol':'1.0-0' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="overdueColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: overdueColumns"></tr>
+        </table>
+      </div>
+    } @else {
+      <div class="cards">
+        @for (row of overdueView(); track row.loanId) {
+          <mat-card>
+            <mat-card-title>{{ row.bookTitle }}</mat-card-title>
+            <mat-card-content>
+              <p>{{ row.readerName }}, просрочка {{ row.daysOverdue }} дн.</p>
+              <p>Штраф {{ row.fine | currency:'RUB':'symbol':'1.0-0' }}</p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+
+    <h2>Читатели</h2>
+    @if (view() === 'table') {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="readerView()">
+          <ng-container matColumnDef="readerName">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('readerName')">Читатель {{ mark('readerName') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.readerName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="loanCount">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('loanCount')">Всего выдач {{ mark('loanCount') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.loanCount }}</td>
+          </ng-container>
+          <ng-container matColumnDef="activeLoanCount">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('activeLoanCount')">На руках {{ mark('activeLoanCount') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.activeLoanCount }}</td>
+          </ng-container>
+          <ng-container matColumnDef="fine">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('fine')">Штраф {{ mark('fine') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.fine | currency:'RUB':'symbol':'1.0-0' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="isBlocked">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('isBlocked')">Статус {{ mark('isBlocked') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.isBlocked ? 'Заблокирован' : 'Активен' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="readerColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: readerColumns"></tr>
+        </table>
+      </div>
+    } @else {
+      <div class="cards">
+        @for (row of readerView(); track row.readerId) {
+          <mat-card>
+            <mat-card-title>{{ row.readerName }}</mat-card-title>
+            <mat-card-content>
+              <p>Выдач {{ row.loanCount }}, на руках {{ row.activeLoanCount }}</p>
+              <p>Штраф {{ row.fine | currency:'RUB':'symbol':'1.0-0' }} · {{ row.isBlocked ? 'заблокирован' : 'активен' }}</p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+
+    <h2>Книги</h2>
+    @if (view() === 'table') {
+      <div class="table-wrap">
+        <table mat-table [dataSource]="bookView()">
+          <ng-container matColumnDef="title">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('title')">Название {{ mark('title') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.title }}</td>
+          </ng-container>
+          <ng-container matColumnDef="author">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('author')">Автор {{ mark('author') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.author }}</td>
+          </ng-container>
+          <ng-container matColumnDef="availableCopies">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('availableCopies')">Свободно {{ mark('availableCopies') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.availableCopies }} из {{ row.totalCopies }}</td>
+          </ng-container>
+          <ng-container matColumnDef="loanCount">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('loanCount')">Выдач {{ mark('loanCount') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.loanCount }}</td>
+          </ng-container>
+          <ng-container matColumnDef="hasActiveLoan">
+            <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('hasActiveLoan')">Сейчас на руках {{ mark('hasActiveLoan') }}</button></th>
+            <td mat-cell *matCellDef="let row">{{ row.hasActiveLoan ? 'Да' : 'Нет' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="bookColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: bookColumns"></tr>
+        </table>
+      </div>
+    } @else {
+      <div class="cards">
+        @for (row of bookView(); track row.bookId) {
+          <mat-card>
+            <mat-card-title>{{ row.title }}</mat-card-title>
+            <mat-card-content>
+              <p>{{ row.author }}</p>
+              <p>Свободно {{ row.availableCopies }} из {{ row.totalCopies }}, выдач {{ row.loanCount }}</p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+</section>

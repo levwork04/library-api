@@ -1,0 +1,36 @@
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/books">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M6 11c6.4-.9 11.4.5 15 4.1V39c-3.7-2.5-8.5-3.3-15-2.5V11z" fill="#f4e4bf"/>
+        <path d="M42 11c-6.4-.9-11.4.5-15 4.1V39c3.7-2.5 8.5-3.3 15-2.5V11z" fill="#fff9ee"/>
+        <path d="M6 11c6.4-.9 11.4.5 15 4.1V39c-3.7-2.5-8.5-3.3-15-2.5V11zM42 11c-6.4-.9-11.4.5-15 4.1V39c3.7-2.5 8.5-3.3 15-2.5V11z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M24 15.2v23.6" stroke="currentColor" stroke-width="1.4"/>
+      </svg>
+      <span class="brand-name">Библиотека</span>
+    </a>
+    <nav class="menu" aria-label="Разделы">
+      <a routerLink="/books" routerLinkActive="active">Книги</a>
+      <a routerLink="/readers" routerLinkActive="active">Читатели</a>
+      <a routerLink="/loans" routerLinkActive="active">Выдачи</a>
+      <a routerLink="/reports" routerLinkActive="active">Отчёты</a>
+    </nav>
+    <div class="session">
+      @if (auth.user(); as user) {
+        <span>{{ user.username }} · {{ user.role === 'Admin' ? 'администратор' : 'пользователь' }}</span>
+        <button mat-stroked-button type="button" (click)="logout()">Выйти</button>
+      } @else {
+        <a mat-flat-button color="primary" routerLink="/login">Войти</a>
+      }
+    </div>
+  </header>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+
+  <footer class="footer">
+    <span>Клиент библиотеки для Library API</span>
+    <a href="http://localhost:5159/swagger" target="_blank" rel="noopener">Swagger API</a>
+  </footer>
+</div>

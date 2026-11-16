@@ -1,0 +1,53 @@
+<mat-card class="form-card">
+  <h1>{{ editing ? 'Продление выдачи' : 'Новая выдача' }}</h1>
+  <form class="form-grid" [formGroup]="form" (ngSubmit)="save()">
+    @if (editing) {
+      <mat-form-field appearance="outline">
+        <mat-label>Новый срок</mat-label>
+        <input matInput type="date" formControlName="dueOn">
+        @if (form.controls.dueOn.touched && form.controls.dueOn.invalid) {
+          <mat-error>Укажите дату.</mat-error>
+        }
+      </mat-form-field>
+    } @else {
+      <mat-form-field appearance="outline">
+        <mat-label>Книга</mat-label>
+        <mat-select formControlName="bookId">
+          @for (book of books(); track book.id) {
+            <mat-option [value]="book.id" [disabled]="book.availableCopies < 1">
+              {{ book.title }} · свободно {{ book.availableCopies }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.bookId.touched && form.controls.bookId.invalid) {
+          <mat-error>Выберите книгу.</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Читатель</mat-label>
+        <mat-select formControlName="readerId">
+          @for (reader of readers(); track reader.id) {
+            <mat-option [value]="reader.id" [disabled]="reader.isBlocked">
+              {{ reader.lastName }} {{ reader.firstName }}{{ reader.isBlocked ? ' · заблокирован' : '' }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.readerId.touched && form.controls.readerId.invalid) {
+          <mat-error>Выберите читателя.</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Дней</mat-label>
+        <input matInput type="number" formControlName="days">
+        @if (form.controls.days.touched && form.controls.days.invalid) {
+          <mat-error>Срок от 1 до 60 дней.</mat-error>
+        }
+      </mat-form-field>
+    }
+    @if (error()) { <p class="error">{{ error() }}</p> }
+    <div class="card-actions">
+      <button mat-flat-button color="primary" type="submit">Сохранить</button>
+      <a mat-button routerLink="/loans">Назад</a>
+    </div>
+  </form>
+</mat-card>

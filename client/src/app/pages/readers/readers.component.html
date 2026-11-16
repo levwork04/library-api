@@ -1,0 +1,84 @@
+<section class="page">
+  <div class="page-head">
+    <div>
+      <h1>Читатели</h1>
+      <p class="hint">Фильтр по фамилии уходит на сервер.</p>
+    </div>
+    <app-view-switch [(view)]="view" />
+  </div>
+  <form class="filters" (ngSubmit)="load()">
+    <mat-form-field appearance="outline">
+      <mat-label>Фамилия</mat-label>
+      <input matInput [value]="lastName()" (input)="lastName.set(asText($event))">
+    </mat-form-field>
+    <button mat-stroked-button type="submit">Найти</button>
+    @if (auth.isAdmin()) {
+      <a mat-flat-button color="primary" routerLink="/readers/new">Добавить</a>
+    }
+  </form>
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (loading()) { <p class="hint">Загрузка…</p> }
+  @else if (visible().length === 0) { <p class="empty">Ничего не найдено.</p> }
+  @else if (view() === 'table') {
+    <div class="table-wrap">
+      <table mat-table [dataSource]="visible()">
+        <ng-container matColumnDef="lastName">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('lastName')">Читатель {{ mark('lastName') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.lastName }} {{ row.firstName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('email')">Email {{ mark('email') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.email }}</td>
+        </ng-container>
+        <ng-container matColumnDef="registeredOn">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('registeredOn')">Регистрация {{ mark('registeredOn') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.registeredOn | date:'dd.MM.yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="isBlocked">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('isBlocked')">Статус {{ mark('isBlocked') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.isBlocked ? 'Заблокирован' : 'Может брать книги' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            @if (auth.isAdmin()) {
+              <a mat-button [routerLink]="['/readers', row.id, 'edit']">Изменить</a>
+              @if (row.isBlocked) {
+                <button mat-button type="button" (click)="setBlocked(row, false)">Разблокировать</button>
+              } @else {
+                <button mat-button type="button" (click)="setBlocked(row, true)">Блокировать</button>
+              }
+              <button mat-button type="button" (click)="remove(row)">Удалить</button>
+            }
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
+  } @else {
+    <div class="cards">
+      @for (reader of visible(); track reader.id) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ reader.lastName }} {{ reader.firstName }}</mat-card-title>
+            <mat-card-subtitle>{{ reader.email }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>С {{ reader.registeredOn | date:'dd.MM.yyyy' }}</p>
+            <p>{{ reader.isBlocked ? 'Заблокирован' : 'Может брать книги' }}</p>
+          </mat-card-content>
+          @if (auth.isAdmin()) {
+            <mat-card-actions class="card-actions">
+              <a mat-button [routerLink]="['/readers', reader.id, 'edit']">Изменить</a>
+              <button mat-button type="button" (click)="setBlocked(reader, !reader.isBlocked)">
+                {{ reader.isBlocked ? 'Разблокировать' : 'Блокировать' }}
+              </button>
+              <button mat-button type="button" (click)="remove(reader)">Удалить</button>
+            </mat-card-actions>
+          }
+        </mat-card>
+      }
+    </div>
+  }
+</section>

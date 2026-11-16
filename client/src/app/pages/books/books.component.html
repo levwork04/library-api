@@ -1,0 +1,87 @@
+<section class="page">
+  <div class="page-head">
+    <div>
+      <h1>Книги</h1>
+      <p class="hint">Каталог открыт без входа. Добавлять и менять книги может только администратор.</p>
+    </div>
+    <app-view-switch [(view)]="view" />
+  </div>
+
+  <form class="filters" (ngSubmit)="load()">
+    <mat-form-field appearance="outline">
+      <mat-label>Автор на сервере</mat-label>
+      <input matInput [value]="authorQuery()" (input)="authorQuery.set(asText($event))">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Поиск по названию</mat-label>
+      <input matInput [value]="titleQuery()" (input)="titleQuery.set(asText($event))">
+    </mat-form-field>
+    <mat-checkbox [checked]="availableOnly()" (change)="availableOnly.set($event.checked); load()">Только в наличии</mat-checkbox>
+    <button mat-stroked-button type="submit">Найти</button>
+    @if (auth.isAdmin()) {
+      <a mat-flat-button color="primary" routerLink="/books/new">Добавить</a>
+    }
+  </form>
+
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (loading()) { <p class="hint">Загрузка…</p> }
+  @else if (visible().length === 0) { <p class="empty">Ничего не найдено.</p> }
+  @else if (view() === 'table') {
+    <div class="table-wrap">
+      <table mat-table [dataSource]="visible()">
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('title')">Название {{ mark('title') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.title }}</td>
+        </ng-container>
+        <ng-container matColumnDef="author">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('author')">Автор {{ mark('author') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.author }}</td>
+        </ng-container>
+        <ng-container matColumnDef="publishedYear">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('publishedYear')">Год {{ mark('publishedYear') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.publishedYear }}</td>
+        </ng-container>
+        <ng-container matColumnDef="price">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('price')">Цена {{ mark('price') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.price | currency:'RUB':'symbol':'1.0-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="availableCopies">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('availableCopies')">В наличии {{ mark('availableCopies') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.availableCopies }} из {{ row.totalCopies }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            @if (auth.isAdmin()) {
+              <a mat-button routerLink="/books/{{ row.id }}/edit">Изменить</a>
+              <button mat-button type="button" (click)="remove(row)">Удалить</button>
+            }
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
+  } @else {
+    <div class="cards">
+      @for (book of visible(); track book.id) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ book.title }}</mat-card-title>
+            <mat-card-subtitle>{{ book.author }}, {{ book.publishedYear }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ book.price | currency:'RUB':'symbol':'1.0-2' }}</p>
+            <p>Свободно {{ book.availableCopies }} из {{ book.totalCopies }}</p>
+          </mat-card-content>
+          @if (auth.isAdmin()) {
+            <mat-card-actions class="card-actions">
+              <a mat-button routerLink="/books/{{ book.id }}/edit">Изменить</a>
+              <button mat-button type="button" (click)="remove(book)">Удалить</button>
+            </mat-card-actions>
+          }
+        </mat-card>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,31 @@
+<mat-card class="login-card">
+  <h1>Вход</h1>
+  <p class="hint">Администратор: admin / Admin123!. Пользователь отчётов: user / User123!.</p>
+  <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Логин</mat-label>
+      <input matInput formControlName="username" autocomplete="username">
+      @if (form.controls.username.touched && form.controls.username.hasError('required')) {
+        <mat-error>Введите логин.</mat-error>
+      }
+      @if (form.controls.username.touched && form.controls.username.hasError('minlength')) {
+        <mat-error>Не короче 3 символов.</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Пароль</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="current-password">
+      @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+        <mat-error>Введите пароль.</mat-error>
+      }
+      @if (form.controls.password.touched && form.controls.password.hasError('minlength')) {
+        <mat-error>Не короче 6 символов.</mat-error>
+      }
+    </mat-form-field>
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+    <button mat-flat-button color="primary" type="submit" [disabled]="pending()">Войти</button>
+  </form>
+  <p><a routerLink="/books">К каталогу без входа</a></p>
+</mat-card>

@@ -1,0 +1,58 @@
+<mat-card class="form-card">
+  <h1>{{ editing ? 'Редактирование книги' : 'Новая книга' }}</h1>
+  <form class="form-grid" [formGroup]="form" (ngSubmit)="save()">
+    <mat-form-field appearance="outline">
+      <mat-label>Название</mat-label>
+      <input matInput formControlName="title">
+      @if (form.controls.title.touched && form.controls.title.invalid) {
+        <mat-error>Название обязательно, минимум 2 символа.</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Автор</mat-label>
+      <input matInput formControlName="author">
+      @if (form.controls.author.touched && form.controls.author.invalid) {
+        <mat-error>Автор обязателен, минимум 2 символа.</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Год издания</mat-label>
+      <input matInput type="number" formControlName="publishedYear">
+      @if (form.controls.publishedYear.touched && form.controls.publishedYear.invalid) {
+        <mat-error>Год от 1400 до {{ yearMax }}.</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Цена</mat-label>
+      <input matInput type="number" step="0.01" formControlName="price">
+      @if (form.controls.price.touched && form.controls.price.invalid) {
+        <mat-error>Цена не может быть отрицательной.</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Тираж</mat-label>
+      <input matInput type="number" formControlName="totalCopies">
+      @if (form.controls.totalCopies.touched && form.controls.totalCopies.invalid) {
+        <mat-error>Тираж не меньше числа уже выданных экземпляров.</mat-error>
+      }
+    </mat-form-field>
+    @if (error()) { <p class="error">{{ error() }}</p> }
+    <div class="card-actions">
+      <button mat-flat-button color="primary" type="submit">Сохранить</button>
+      <a mat-button routerLink="/books">Назад</a>
+    </div>
+  </form>
+  @if (editing) {
+    <h2>Скидка</h2>
+    <div class="filters">
+      <mat-form-field appearance="outline">
+        <mat-label>Проценты</mat-label>
+        <input matInput type="number" [formControl]="form.controls.percent">
+        @if (form.controls.percent.touched && form.controls.percent.invalid) {
+          <mat-error>От 1 до 99.</mat-error>
+        }
+      </mat-form-field>
+      <button mat-stroked-button type="button" (click)="discount()">Применить</button>
+    </div>
+  }
+</mat-card>

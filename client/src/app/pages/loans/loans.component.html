@@ -1,0 +1,83 @@
+<section class="page">
+  <div class="page-head">
+    <div>
+      <h1>Выдачи</h1>
+      <p class="hint">Список соединяет выдачу с названием книги и фамилией читателя.</p>
+    </div>
+    <app-view-switch [(view)]="view" />
+  </div>
+  <div class="filters">
+    <mat-checkbox [checked]="activeOnly()" (change)="activeOnly.set($event.checked); load()">Только открытые</mat-checkbox>
+    @if (auth.isAdmin()) {
+      <a mat-flat-button color="primary" routerLink="/loans/new">Выдать книгу</a>
+    }
+  </div>
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (loading()) { <p class="hint">Загрузка…</p> }
+  @else if (visible().length === 0) { <p class="empty">Выдач нет.</p> }
+  @else if (view() === 'table') {
+    <div class="table-wrap">
+      <table mat-table [dataSource]="visible()">
+        <ng-container matColumnDef="bookTitle">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('bookTitle')">Книга {{ mark('bookTitle') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.bookTitle }}</td>
+        </ng-container>
+        <ng-container matColumnDef="readerName">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('readerName')">Читатель {{ mark('readerName') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.readerName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="issuedOn">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('issuedOn')">Выдана {{ mark('issuedOn') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.issuedOn | date:'dd.MM.yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="dueOn">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('dueOn')">Срок {{ mark('dueOn') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.dueOn | date:'dd.MM.yyyy' }}{{ row.returnedOn ? ' · возвращена' : '' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="fine">
+          <th mat-header-cell *matHeaderCellDef><button class="sort" type="button" (click)="toggle('fine')">Штраф {{ mark('fine') }}</button></th>
+          <td mat-cell *matCellDef="let row">{{ row.fine }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            @if (auth.isAdmin()) {
+              @if (!row.returnedOn) {
+                <a mat-button [routerLink]="['/loans', row.id, 'edit']">Продлить</a>
+                <button mat-button type="button" (click)="giveBack(row)">Вернуть</button>
+              }
+              <button mat-button type="button" (click)="remove(row)">Удалить</button>
+            }
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
+  } @else {
+    <div class="cards">
+      @for (row of visible(); track row.id) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ row.bookTitle }}</mat-card-title>
+            <mat-card-subtitle>{{ row.readerName }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Выдана {{ row.issuedOn | date:'dd.MM.yyyy' }}, срок {{ row.dueOn | date:'dd.MM.yyyy' }}</p>
+            <p>{{ row.returnedOn ? 'Возвращена ' + (row.returnedOn | date:'dd.MM.yyyy') : 'На руках' }}</p>
+            <p>Штраф: {{ row.fine }}</p>
+          </mat-card-content>
+          @if (auth.isAdmin()) {
+            <mat-card-actions class="card-actions">
+              @if (!row.returnedOn) {
+                <a mat-button [routerLink]="['/loans', row.id, 'edit']">Продлить</a>
+                <button mat-button type="button" (click)="giveBack(row)">Вернуть</button>
+              }
+              <button mat-button type="button" (click)="remove(row)">Удалить</button>
+            </mat-card-actions>
+          }
+        </mat-card>
+      }
+    </div>
+  }
+</section>
